@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: concourse-web
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: concourse-web
+    spec:
+      containers:
+      - name: concourse-web
+        image: concourse/concourse
+        args: ['web']
+        env:
+        - name: CONCOURSE_BASIC_AUTH_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: concourse-secrets
+              key: basic-auth-username
+        - name: CONCOURSE_BASIC_AUTH_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: concourse-secrets
+              key: basic-auth-password
+        - name: CONCOURSE_EXTERNAL_URL
+          value: http://concourse.periscopedata.com:8080
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: concourse-secrets
+              key: postgres-password
+        - name: CONCOURSE_POSTGRES_DATA_SOURCE
+          value: |-
+            postgres://concourse:$(POSTGRES_PASSWORD)@$(CONCOURSE_POSTGRESQL_SERVICE_HOST):$(CONCOURSE_POSTGRESQL_SERVICE_PORT)/concourse?sslmode=disable
+        - name: MY_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: PEER_URL
+          value: http://$(MY_IP):$(CONCOURSE_WEB_SERVICE_PORT)
+        ports:
+        - containerPort: 8080
+          name: atc
+        - containerPort: 2222
+          name: tsa
+        volumeMounts:
+        - name: concourse-secrets
+          mountPath: /concourse-keys
+          readOnly: true
+      volumes:
+      - name: concourse-secrets
+        secret:
+          secretName: concourse-secrets
+          items:
+          - key: tsa-host-key
+            path: tsa_host_key
+          - key: tsa-authorized-keys
+            path: authorized_worker_keys
+          - key: session-signing-key
+            path: session_signing_key
+

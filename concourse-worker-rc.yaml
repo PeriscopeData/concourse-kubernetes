@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: concourse-worker
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: concourse-worker
+    spec:
+      containers:
+      - name: concourse-worker
+        image: concourse/concourse
+        args: ['worker']
+        securityContext:
+          privileged: true
+        env:
+        - name: CONCOURSE_BASIC_AUTH_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: concourse-secrets
+              key: basic-auth-username
+        - name: CONCOURSE_TSA_HOST
+          value: $(CONCOURSE_WEB_SERVICE_HOST):$(CONCOURSE_WEB_SERVICE_PORT)
+        volumeMounts:
+        - name: concourse-secrets
+          mountPath: /concourse-keys
+          readOnly: true
+        - name: work-directory
+          mountPath: /opt/concourse/worker
+      volumes:
+        - name: concourse-secrets
+          secret:
+            secretName: concourse-secrets
+            items:
+            - key: tsa-public-key
+              path: tsa_host_key.pub
+            - key: tsa-worker-private-key
+              path: worker_key
+        - name: work-directory
+          emptyDir: {}  # You will probably want persistent storage in production
