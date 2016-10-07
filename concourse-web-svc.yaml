@@ -4,9 +4,14 @@ metadata:
   name: concourse-web
 spec:
   ports:
-  - port: 8080
+  - name: http
+    port: 8080
     protocol: 'TCP'
     targetPort: 8080
+  - name: ssh
+    port: 2222
+    protocol: 'TCP'
+    targetPort: 2222
   selector:
     name: concourse-web
   type: LoadBalancer
